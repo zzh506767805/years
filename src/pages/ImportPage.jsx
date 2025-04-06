@@ -56,7 +56,7 @@ const batchTemplate = [
 
 function ImportPage() {
   const navigate = useNavigate();
-  const { isAuthenticated, user, isAdmin } = useAuth();
+  const { isAuthenticated, isAdmin } = useAuth();
   const [activeTab, setActiveTab] = useState('single'); // 'single' 或 'batch'
   
   // 表单数据

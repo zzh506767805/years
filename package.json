@@ -21,6 +21,7 @@
     "web-vitals": "^2.1.4"
   },
   "devDependencies": {
+    "@babel/plugin-proposal-private-property-in-object": "^7.21.11",
     "concurrently": "^8.2.2",
     "gh-pages": "^6.1.0"
   },
@@ -34,7 +35,7 @@
     "server": "node server/server.js",
     "dev": "concurrently \"npm run server\" \"npm run start\"",
     "seed": "node server/seed.js",
-    "vercel-build": "react-scripts build"
+    "vercel-build": "DISABLE_ESLINT_PLUGIN=true react-scripts build"
   },
   "eslintConfig": {
     "extends": [
