@@ -62,6 +62,7 @@ export const AuthProvider = ({ children }) => {
         }
       } else {
         console.log("无token，用户未登录");
+        setUser(null);
       }
       setLoading(false);
     };
@@ -193,6 +194,41 @@ export const AuthProvider = ({ children }) => {
     setError(null);
   };
 
+  // 强制重新加载用户信息
+  const refreshUser = async () => {
+    console.log('强制刷新用户信息');
+    
+    const savedToken = localStorage.getItem('token');
+    if (!savedToken) {
+      console.log('无token，无法刷新用户信息');
+      return false;
+    }
+    
+    try {
+      // 设置全局默认请求头
+      axios.defaults.headers.common['Authorization'] = `Bearer ${savedToken}`;
+      
+      // 获取用户信息
+      const url = `${API_URL}/auth/me`;
+      console.log('刷新用户信息请求URL:', url);
+      
+      const response = await axios.get(url);
+      console.log('刷新用户信息响应:', response.data);
+      
+      if (response.data && response.data.success) {
+        setUser(response.data.user);
+        setToken(savedToken);
+        console.log("用户信息刷新成功:", response.data.user);
+        return true;
+      }
+    } catch (error) {
+      console.error('刷新用户信息失败:', error.message);
+      return false;
+    }
+    
+    return false;
+  };
+
   // 导出上下文值
   const contextValue = {
     user,
@@ -204,7 +240,8 @@ export const AuthProvider = ({ children }) => {
     logout,
     hasRole,
     isAuthenticated,
-    clearError
+    clearError,
+    refreshUser
   };
 
   return (

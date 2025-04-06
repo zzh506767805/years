@@ -1,76 +1,86 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import '../styles/AuthPages.css';
-import { registerUser } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 
 const RegisterPage = () => {
-  const [formData, setFormData] = useState({
-    email: '',
-    password: '',
-    confirmPassword: ''
-  });
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [message, setMessage] = useState({ type: '', text: '' });
-  const [loading, setLoading] = useState(false);
-
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  const { register, isAuthenticated, error, clearError, refreshUser } = useAuth();
   const navigate = useNavigate();
-  const { login } = useAuth();
-
-  const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-  };
-
+  
+  // 如果用户已登录，重定向到首页
+  useEffect(() => {
+    if (isAuthenticated()) {
+      navigate('/');
+    }
+  }, [isAuthenticated, navigate]);
+  
+  // 显示认证错误
+  useEffect(() => {
+    if (error) {
+      setMessage({ type: 'error', text: error });
+      clearError();
+    }
+  }, [error, clearError]);
+  
+  // 处理表单提交
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setLoading(true);
+    
+    // 表单验证
+    if (!email || !password || !confirmPassword) {
+      setMessage({ type: 'error', text: '请填写所有必填字段' });
+      return;
+    }
+    
+    if (password !== confirmPassword) {
+      setMessage({ type: 'error', text: '两次输入的密码不一致' });
+      return;
+    }
+    
+    if (password.length < 6) {
+      setMessage({ type: 'error', text: '密码长度必须至少为6个字符' });
+      return;
+    }
+    
+    // 提交注册请求
+    setIsSubmitting(true);
     setMessage({ type: '', text: '' });
-
+    
     try {
-      // 验证表单
-      if (!formData.email || !formData.password || !formData.confirmPassword) {
-        setMessage({ type: 'error', text: '请填写所有字段' });
-        setLoading(false);
-        return;
-      }
-
-      if (formData.password !== formData.confirmPassword) {
-        setMessage({ type: 'error', text: '两次输入的密码不一致' });
-        setLoading(false);
-        return;
-      }
-
-      if (formData.password.length < 6) {
-        setMessage({ type: 'error', text: '密码长度不能少于6个字符' });
-        setLoading(false);
-        return;
-      }
-
-      // 发送注册请求
-      const response = await registerUser({
-        email: formData.email,
-        password: formData.password
-      });
+      const result = await register(email, password);
       
-      // 使用auth上下文的login函数保存用户信息
-      login(response.user, response.token);
-      
-      setMessage({ type: 'success', text: '注册成功！正在重定向...' });
-      
-      // 跳转到首页
-      setTimeout(() => {
-        navigate('/');
-      }, 1500);
+      if (result.success) {
+        // 显示成功消息
+        setMessage({ type: 'success', text: '注册成功！' });
+        
+        // 强制刷新用户状态
+        await refreshUser();
+        
+        // 注册成功，重定向到首页
+        setTimeout(() => {
+          navigate('/');
+        }, 1000);
+      } else {
+        // 显示错误消息
+        setMessage({ type: 'error', text: result.message });
+      }
     } catch (error) {
-      const errorMessage = error.response?.data?.message || '注册失败，请重试';
-      setMessage({ type: 'error', text: errorMessage });
-      setLoading(false);
+      setMessage({ type: 'error', text: '注册过程中出现错误，请稍后再试' });
+    } finally {
+      setIsSubmitting(false);
     }
   };
-
+  
   return (
     <div className="auth-container">
-      <div className="auth-form-container">
-        <h2>创建新账户</h2>
+      <div className="auth-card">
+        <h1 className="auth-title">注册账户</h1>
         
         {message.text && (
           <div className={`message ${message.type}`}>
@@ -78,15 +88,14 @@ const RegisterPage = () => {
           </div>
         )}
         
-        <form onSubmit={handleSubmit} className="auth-form">
+        <form className="auth-form" onSubmit={handleSubmit}>
           <div className="form-group">
             <label htmlFor="email">邮箱</label>
             <input
               type="email"
               id="email"
-              name="email"
-              value={formData.email}
-              onChange={handleChange}
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
               placeholder="请输入您的邮箱"
               required
             />
@@ -97,10 +106,9 @@ const RegisterPage = () => {
             <input
               type="password"
               id="password"
-              name="password"
-              value={formData.password}
-              onChange={handleChange}
-              placeholder="请设置您的密码（至少6个字符）"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="请输入密码（至少6个字符）"
               required
             />
           </div>
@@ -110,26 +118,25 @@ const RegisterPage = () => {
             <input
               type="password"
               id="confirmPassword"
-              name="confirmPassword"
-              value={formData.confirmPassword}
-              onChange={handleChange}
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
               placeholder="请再次输入密码"
               required
             />
           </div>
           
-          <button 
-            type="submit" 
+          <button
+            type="submit"
             className="auth-button"
-            disabled={loading}
+            disabled={isSubmitting}
           >
-            {loading ? '注册中...' : '注册'}
+            {isSubmitting ? '注册中...' : '注册'}
           </button>
         </form>
         
         <div className="auth-links">
           <p>
-            已有账号？ <Link to="/login">登录</Link>
+            已有账号？ <Link to="/login">立即登录</Link>
           </p>
         </div>
       </div>

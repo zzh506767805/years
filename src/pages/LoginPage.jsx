@@ -1,60 +1,75 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import '../styles/AuthPages.css';
-import { loginUser } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 
 const LoginPage = () => {
-  const [formData, setFormData] = useState({
-    email: '',
-    password: ''
-  });
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [message, setMessage] = useState({ type: '', text: '' });
-  const [loading, setLoading] = useState(false);
-
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  const { login, isAuthenticated, error, clearError, refreshUser } = useAuth();
   const navigate = useNavigate();
-  const { login } = useAuth();
-
-  const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-  };
-
+  
+  // 如果用户已登录，重定向到首页
+  useEffect(() => {
+    if (isAuthenticated()) {
+      navigate('/');
+    }
+  }, [isAuthenticated, navigate]);
+  
+  // 显示认证错误
+  useEffect(() => {
+    if (error) {
+      setMessage({ type: 'error', text: error });
+      clearError();
+    }
+  }, [error, clearError]);
+  
+  // 处理表单提交
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setLoading(true);
+    
+    // 简单验证
+    if (!email || !password) {
+      setMessage({ type: 'error', text: '请填写所有必填字段' });
+      return;
+    }
+    
+    // 提交登录请求
+    setIsSubmitting(true);
     setMessage({ type: '', text: '' });
-
+    
     try {
-      // 验证表单
-      if (!formData.email || !formData.password) {
-        setMessage({ type: 'error', text: '请填写所有字段' });
-        setLoading(false);
-        return;
+      const result = await login(email, password);
+      
+      if (result.success) {
+        // 显示成功消息
+        setMessage({ type: 'success', text: '登录成功！' });
+        
+        // 强制刷新用户状态
+        await refreshUser();
+        
+        // 登录成功，重定向到首页
+        setTimeout(() => {
+          navigate('/');
+        }, 1000);
+      } else {
+        // 显示错误消息
+        setMessage({ type: 'error', text: result.message });
       }
-
-      // 发送登录请求
-      const response = await loginUser(formData);
-      
-      // 使用auth上下文的login函数保存用户信息
-      login(response.user, response.token);
-      
-      setMessage({ type: 'success', text: '登录成功！正在重定向...' });
-      
-      // 跳转到首页
-      setTimeout(() => {
-        navigate('/');
-      }, 1500);
     } catch (error) {
-      const errorMessage = error.response?.data?.message || '登录失败，请重试';
-      setMessage({ type: 'error', text: errorMessage });
-      setLoading(false);
+      setMessage({ type: 'error', text: '登录过程中出现错误，请稍后再试' });
+    } finally {
+      setIsSubmitting(false);
     }
   };
-
+  
   return (
     <div className="auth-container">
-      <div className="auth-form-container">
-        <h2>登录账户</h2>
+      <div className="auth-card">
+        <h1 className="auth-title">登录</h1>
         
         {message.text && (
           <div className={`message ${message.type}`}>
@@ -62,15 +77,14 @@ const LoginPage = () => {
           </div>
         )}
         
-        <form onSubmit={handleSubmit} className="auth-form">
+        <form className="auth-form" onSubmit={handleSubmit}>
           <div className="form-group">
             <label htmlFor="email">邮箱</label>
             <input
               type="email"
               id="email"
-              name="email"
-              value={formData.email}
-              onChange={handleChange}
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
               placeholder="请输入您的邮箱"
               required
             />
@@ -81,26 +95,25 @@ const LoginPage = () => {
             <input
               type="password"
               id="password"
-              name="password"
-              value={formData.password}
-              onChange={handleChange}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
               placeholder="请输入您的密码"
               required
             />
           </div>
           
-          <button 
-            type="submit" 
+          <button
+            type="submit"
             className="auth-button"
-            disabled={loading}
+            disabled={isSubmitting}
           >
-            {loading ? '登录中...' : '登录'}
+            {isSubmitting ? '登录中...' : '登录'}
           </button>
         </form>
         
         <div className="auth-links">
           <p>
-            还没有账号？ <Link to="/register">注册</Link>
+            还没有账号？ <Link to="/register">立即注册</Link>
           </p>
         </div>
       </div>
