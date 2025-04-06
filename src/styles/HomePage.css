@@ -1,0 +1,324 @@
+.home-container {
+  padding: 20px;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.home-header {
+  text-align: left;
+  margin-bottom: 20px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.header-left {
+  display: flex;
+  align-items: baseline;
+  gap: 20px;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+}
+
+.home-header h1 {
+  font-size: 2.5rem;
+  color: #2c3e50;
+  margin: 0;
+  font-weight: 300;
+  letter-spacing: 0.1em;
+  font-family: "Helvetica Neue", Arial, sans-serif;
+}
+
+.slogan {
+  font-size: 1rem;
+  color: #95a5a6;
+  letter-spacing: 0.2em;
+  font-weight: 300;
+  font-family: "STFangsong", "仿宋", "FangSong", serif;
+}
+
+.import-data-button {
+  background-color: #2c3e50;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 16px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.import-data-button:hover {
+  background-color: #1a2530;
+}
+
+/* 搜索框样式 */
+.search-container {
+  position: relative;
+  margin-bottom: 20px;
+  width: 100%;
+  max-width: 600px;
+}
+
+.search-input {
+  width: 100%;
+  padding: 12px 20px;
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  font-size: 1rem;
+  color: #495057;
+  background: #f8f9fa;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+}
+
+.search-input:focus {
+  outline: none;
+  border-color: #2c3e50;
+  background: white;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+}
+
+.clear-search-btn {
+  position: absolute;
+  right: 15px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: #adb5bd;
+  font-size: 1.2rem;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+}
+
+.clear-search-btn:hover {
+  color: #495057;
+}
+
+.cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 30px;
+  padding: 0;
+}
+
+.person-card {
+  background: white;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+  transition: all 0.3s ease;
+  cursor: pointer;
+  position: relative;
+}
+
+.person-card:hover {
+  transform: translateY(-10px);
+  box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+}
+
+/* 移除了图片占位符的相关样式 */
+
+.card-content {
+  padding: 24px;
+  position: relative;
+  background: white;
+  border-top: 3px solid #2c3e50;
+}
+
+.card-content h2 {
+  margin: 0 0 8px 0;
+  font-size: 1.6rem;
+  color: #2c3e50;
+  font-weight: 500;
+}
+
+.card-content h3 {
+  margin: 0 0 16px 0;
+  font-size: 1rem;
+  color: #7f8c8d;
+  font-weight: 500;
+}
+
+.card-content p {
+  margin: 0;
+  font-size: 0.95rem;
+  color: #95a5a6;
+  line-height: 1.5;
+}
+
+.view-switcher {
+  margin-bottom: 30px;
+  display: flex;
+  gap: 12px;
+}
+
+.switch-btn {
+  padding: 8px 20px;
+  border: none;
+  border-radius: 8px;
+  background: #f8f9fa;
+  color: #495057;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.switch-btn:hover {
+  background: #e9ecef;
+}
+
+.switch-btn.active {
+  background: #2c3e50;
+  color: white;
+}
+
+.years-grid, .ages-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 20px;
+}
+
+.year-card, .age-card {
+  background: white;
+  border-radius: 12px;
+  padding: 20px;
+  text-align: center;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.year-card:hover, .age-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+}
+
+.year-card h2, .age-card h2 {
+  margin: 0;
+  font-size: 1.2rem;
+  color: #2c3e50;
+  font-weight: 500;
+}
+
+.no-data {
+  text-align: center;
+  padding: 40px;
+  font-size: 1.1rem;
+  color: #7f8c8d;
+  background: #f8f9fa;
+  border-radius: 12px;
+  margin: 20px 0;
+}
+
+.loading {
+  text-align: center;
+  padding: 40px;
+  font-size: 1.1rem;
+  color: #7f8c8d;
+}
+
+@media (max-width: 768px) {
+  .home-header {
+    flex-direction: column;
+    gap: 15px;
+    align-items: flex-start;
+  }
+
+  .header-left {
+    flex-direction: column;
+    gap: 8px;
+    align-items: flex-start;
+  }
+
+  .home-header h1 {
+    font-size: 2rem;
+    letter-spacing: 0.05em;
+  }
+
+  .slogan {
+    font-size: 0.9rem;
+    letter-spacing: 0.1em;
+  }
+
+  .search-container {
+    max-width: 100%;
+  }
+
+  .search-input {
+    padding: 10px 15px;
+    font-size: 0.9rem;
+  }
+
+  .cards-grid {
+    grid-template-columns: 1fr;
+    padding: 0;
+  }
+
+  .card-content h2 {
+    font-size: 1.4rem;
+  }
+
+  .years-grid, .ages-grid {
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    gap: 15px;
+  }
+
+  .year-card, .age-card {
+    padding: 15px;
+  }
+
+  .year-card h2, .age-card h2 {
+    font-size: 1rem;
+  }
+}
+
+.auth-buttons {
+  display: flex;
+  gap: 10px;
+}
+
+.login-button,
+.register-button,
+.logout-button {
+  padding: 8px 16px;
+  border-radius: 4px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border: none;
+}
+
+.login-button {
+  background-color: #e6e6e6;
+  color: #333;
+}
+
+.login-button:hover {
+  background-color: #d9d9d9;
+}
+
+.register-button {
+  background-color: #5f7adb;
+  color: white;
+}
+
+.register-button:hover {
+  background-color: #4a62b3;
+}
+
+.logout-button {
+  background-color: #f44336;
+  color: white;
+}
+
+.logout-button:hover {
+  background-color: #d32f2f;
+} 

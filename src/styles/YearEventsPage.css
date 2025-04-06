@@ -1,0 +1,149 @@
+.year-events-container {
+  padding: 40px;
+  max-width: 800px;
+  margin: 0 auto;
+  min-height: 100vh;
+  background: #fff;
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif;
+}
+
+.back-button {
+  display: inline-flex;
+  align-items: center;
+  color: #999;
+  font-size: 14px;
+  cursor: pointer;
+  margin-bottom: 60px;
+}
+
+.back-button::before {
+  content: '←';
+  margin-right: 8px;
+}
+
+.back-button:hover {
+  color: #666;
+}
+
+.year-header {
+  margin-bottom: 60px;
+}
+
+.year-header h1 {
+  font-size: 48px;
+  font-weight: 600;
+  margin: 0 0 16px 0;
+  display: flex;
+  align-items: baseline;
+}
+
+.year-label {
+  font-size: 20px;
+  color: #999;
+  margin-left: 8px;
+  font-weight: normal;
+}
+
+.year-subtitle {
+  font-size: 16px;
+  color: #666;
+  margin: 0;
+}
+
+.events-list {
+  position: relative;
+}
+
+.event-item {
+  padding: 32px 0;
+  border-bottom: 1px solid #eee;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.event-item:hover {
+  padding-left: 16px;
+  background: #f9f9f9;
+}
+
+.event-item:last-child {
+  border-bottom: none;
+}
+
+.event-person {
+  display: flex;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.person-name {
+  font-size: 20px;
+  font-weight: 500;
+  color: #333;
+}
+
+.person-age {
+  font-size: 14px;
+  color: #666;
+  margin-left: 12px;
+  padding: 2px 8px;
+  background: #f5f5f5;
+  border-radius: 12px;
+}
+
+.event-content {
+  color: #666;
+}
+
+.event-title {
+  font-size: 16px;
+  font-weight: 500;
+  color: #333;
+  margin-bottom: 8px;
+}
+
+.event-description {
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+.no-events {
+  text-align: center;
+  padding: 60px 0;
+  color: #999;
+  font-size: 16px;
+}
+
+@media (max-width: 768px) {
+  .year-events-container {
+    padding: 20px;
+  }
+
+  .year-header h1 {
+    font-size: 36px;
+  }
+
+  .year-label {
+    font-size: 16px;
+  }
+
+  .event-person {
+    font-size: 18px;
+  }
+
+  .person-name {
+    font-size: 18px;
+  }
+
+  .person-age {
+    font-size: 13px;
+  }
+
+  .event-title {
+    font-size: 15px;
+  }
+
+  .event-description {
+    font-size: 14px;
+  }
+} 
