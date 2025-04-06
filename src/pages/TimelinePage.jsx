@@ -13,8 +13,15 @@ function TimelinePage() {
 
   // 使用useCallback包装数据加载函数
   const loadPersonData = useCallback(async () => {
+    // 检查ID是否有效
+    if (!id || id === 'undefined' || id === 'null') {
+      setError('无效的人物ID');
+      setIsLoading(false);
+      return;
+    }
+
     // 如果已经加载了相同ID的数据，不再重复请求
-    if (dataLoaded && person && person.id === parseInt(id)) {
+    if (dataLoaded && person && person._id === id) {
       return;
     }
 
@@ -72,29 +79,33 @@ function TimelinePage() {
         <h1 className="timeline-title">{person.name}的人生轨迹</h1>
       </div>
       <div className="timeline">
-        {person.experiences.map((experience, index) => {
-          const age = experience.year - person.birthYear;
-          return (
-            <div key={index} className="timeline-item">
-              <div className="timeline-left">
-                <div className="timeline-year" onClick={() => handleYearClick(experience.year)}>
-                  {experience.year}
-                  <span className="timeline-year-small">年</span>
+        {person.experiences && person.experiences.length > 0 ? (
+          person.experiences.map((experience, index) => {
+            const age = experience.year - person.birthYear;
+            return (
+              <div key={index} className="timeline-item">
+                <div className="timeline-left">
+                  <div className="timeline-year" onClick={() => handleYearClick(experience.year)}>
+                    {experience.year}
+                    <span className="timeline-year-small">年</span>
+                  </div>
+                  <div className="timeline-age" onClick={() => handleAgeClick(experience.year)}>
+                    {age}
+                    <span className="timeline-age-small">岁</span>
+                  </div>
                 </div>
-                <div className="timeline-age" onClick={() => handleAgeClick(experience.year)}>
-                  {age}
-                  <span className="timeline-age-small">岁</span>
+                <div className="timeline-right">
+                  <div className="timeline-event">
+                    <h3 className="timeline-event-title">{experience.title}</h3>
+                    <p className="timeline-event-desc">{experience.description}</p>
+                  </div>
                 </div>
               </div>
-              <div className="timeline-right">
-                <div className="timeline-event">
-                  <h3 className="timeline-event-title">{experience.title}</h3>
-                  <p className="timeline-event-desc">{experience.description}</p>
-                </div>
-              </div>
-            </div>
-          );
-        })}
+            );
+          })
+        ) : (
+          <div className="no-experiences">该人物暂无经历记录</div>
+        )}
       </div>
     </div>
   );

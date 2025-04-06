@@ -17,9 +17,9 @@ function PeopleView({ people, onCardClick, isLoading }) {
     <div className="cards-grid">
       {people.map((person) => (
         <div 
-          key={person.id}
+          key={person._id}
           className="person-card"
-          onClick={() => onCardClick(person.id)}
+          onClick={() => onCardClick(person._id)}
         >
           <div className="card-content">
             <h2>{person.name}</h2>

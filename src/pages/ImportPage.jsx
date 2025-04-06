@@ -56,7 +56,7 @@ const batchTemplate = [
 
 function ImportPage() {
   const navigate = useNavigate();
-  const { isAuthenticated, isAdmin } = useAuth();
+  const { isAuthenticated, user, hasRole } = useAuth();
   const [activeTab, setActiveTab] = useState('single'); // 'single' 或 'batch'
   
   // 表单数据
@@ -70,7 +70,7 @@ function ImportPage() {
 
   // 检查用户是否已登录
   useEffect(() => {
-    if (!isAuthenticated) {
+    if (!isAuthenticated()) {
       setMessage('请先登录后再使用导入功能');
       setMessageType('error');
       setTimeout(() => {
@@ -78,6 +78,15 @@ function ImportPage() {
       }, 2000);
     }
   }, [isAuthenticated, navigate]);
+  
+  // 如果不是管理员但选择了批量导入，自动切换回单条导入
+  useEffect(() => {
+    if (activeTab === 'batch' && !hasRole('admin')) {
+      setActiveTab('single');
+      setMessage('只有管理员可以使用批量导入功能');
+      setMessageType('warning');
+    }
+  }, [activeTab, hasRole]);
   
   // 处理基本信息变化
   const handleInputChange = (e) => {
@@ -167,7 +176,14 @@ function ImportPage() {
           throw new Error(result.message || '导入失败');
         }
       } else {
-        // 批量导入
+        // 批量导入 - 需要管理员权限
+        if (!hasRole('admin')) {
+          setMessage('只有管理员可以使用批量导入功能');
+          setMessageType('error');
+          setIsSubmitting(false);
+          return;
+        }
+        
         if (!validateBatchData()) {
           setIsSubmitting(false);
           return;
@@ -251,218 +267,191 @@ function ImportPage() {
           setMessageType('error');
           return false;
         }
-        
-        // 验证经历数据
-        for (let j = 0; j < person.experiences.length; j++) {
-          const exp = person.experiences[j];
-          if (!exp.year || !exp.title || !exp.description) {
-            setMessage(`${person.name}的第${j+1}条经历数据不完整`);
-            setMessageType('error');
-            return false;
-          }
-        }
       }
       
       return true;
     } catch (error) {
-      setMessage('JSON格式错误: ' + error.message);
+      setMessage('JSON格式不正确，请检查输入');
       setMessageType('error');
       return false;
     }
   };
-
-  // 如果用户未登录，显示加载中状态
-  if (!isAuthenticated) {
-    return (
-      <div className="import-container">
-        <div className="import-header">
-          <h1 className="import-title">导入名人数据</h1>
-          <div className="back-button" onClick={() => navigate('/')}>
-            返回首页
-          </div>
-        </div>
-        
-        {message && (
-          <div className={`${messageType}-message`}>
-            {message}
-          </div>
-        )}
-        
-        <div className="loading-container">
-          正在检查登录状态...
-        </div>
-      </div>
-    );
-  }
-
+  
   return (
     <div className="import-container">
       <div className="import-header">
-        <h1 className="import-title">导入名人数据</h1>
-        <div className="back-button" onClick={() => navigate('/')}>
+        <button className="back-button" onClick={() => navigate('/')}>
           返回首页
-        </div>
+        </button>
+        <h1 className="import-title">导入名人数据</h1>
       </div>
       
-      {isAdmin() ? (
-        <div className="import-tabs">
+      {message && (
+        <div className={`message ${messageType}`}>
+          {message}
+        </div>
+      )}
+      
+      <div className="import-tabs">
+        <button 
+          className={`tab-button ${activeTab === 'single' ? 'active' : ''}`}
+          onClick={() => setActiveTab('single')}
+        >
+          单条导入
+        </button>
+        {hasRole('admin') && (
           <button 
-            className={`import-tab ${activeTab === 'single' ? 'active' : ''}`}
-            onClick={() => setActiveTab('single')}
-          >
-            导入单个人物
-          </button>
-          <button 
-            className={`import-tab ${activeTab === 'batch' ? 'active' : ''}`}
+            className={`tab-button ${activeTab === 'batch' ? 'active' : ''}`}
             onClick={() => setActiveTab('batch')}
           >
             批量导入
           </button>
-          <button 
-            className="template-button"
-            onClick={insertTemplate}
-          >
-            插入模板
-          </button>
-        </div>
-      ) : (
-        <div className="user-role-info">
-          <p>当前以普通用户身份登录，仅支持单个人物导入</p>
-        </div>
-      )}
+        )}
+      </div>
       
-      {(activeTab === 'single' || !isAdmin()) ? (
-        // 单个人物导入表单
-        <div className="single-import-form">
+      {activeTab === 'single' ? (
+        <div className="import-form-container">
           <div className="form-group">
-            <label className="form-label">姓名 *</label>
-            <input 
-              type="text" 
-              name="name" 
-              value={personData.name} 
-              onChange={handleInputChange}
+            <label className="form-label">姓名</label>
+            <input
+              type="text"
+              name="name"
               className="form-input"
-              placeholder="请输入人物姓名"
+              value={personData.name}
+              onChange={handleInputChange}
+              placeholder="人物姓名"
             />
           </div>
           
           <div className="form-group">
-            <label className="form-label">出生年份 *</label>
-            <input 
-              type="number" 
-              name="birthYear" 
-              value={personData.birthYear} 
-              onChange={handleInputChange}
+            <label className="form-label">出生年份</label>
+            <input
+              type="number"
+              name="birthYear"
               className="form-input"
-              placeholder="请输入出生年份"
+              value={personData.birthYear}
+              onChange={handleInputChange}
+              placeholder="YYYY"
             />
           </div>
           
           <div className="form-group">
-            <label className="form-label">职业/头衔</label>
-            <input 
-              type="text" 
-              name="title" 
-              value={personData.title} 
-              onChange={handleInputChange}
+            <label className="form-label">头衔/职业</label>
+            <input
+              type="text"
+              name="title"
               className="form-input"
-              placeholder="请输入职业或头衔"
+              value={personData.title}
+              onChange={handleInputChange}
+              placeholder="如：作家、科学家、艺术家等"
             />
           </div>
           
           <div className="form-group">
             <label className="form-label">简介</label>
-            <textarea 
-              name="brief" 
-              value={personData.brief} 
+            <textarea
+              name="brief"
+              className="form-textarea"
+              value={personData.brief}
               onChange={handleInputChange}
-              className="form-input"
-              placeholder="请输入简短介绍"
-              rows="3"
+              placeholder="简短描述这个人物的主要成就或特点"
             />
           </div>
           
           <div className="experiences-container">
-            <h3>生涯经历 *</h3>
+            <div className="experiences-header">
+              <h3>人生经历</h3>
+              <button 
+                className="add-experience-button"
+                onClick={addExperience}
+                type="button"
+              >
+                添加经历
+              </button>
+            </div>
+            
             {personData.experiences.map((exp, index) => (
-              <div key={index} className="experience-item">
-                <input 
-                  type="number" 
-                  value={exp.year} 
-                  onChange={(e) => handleExperienceChange(index, 'year', e.target.value)}
-                  className="experience-input year-input"
-                  placeholder="年份"
-                />
-                <input 
-                  type="text" 
-                  value={exp.title} 
-                  onChange={(e) => handleExperienceChange(index, 'title', e.target.value)}
-                  className="experience-input"
-                  placeholder="标题"
-                />
-                <input 
-                  type="text" 
-                  value={exp.description} 
-                  onChange={(e) => handleExperienceChange(index, 'description', e.target.value)}
-                  className="experience-input"
-                  placeholder="描述"
-                />
-                <button 
-                  onClick={() => removeExperience(index)} 
-                  className="remove-button"
-                >
-                  删除
-                </button>
+              <div key={index} className="experience-entry">
+                <div className="experience-header">
+                  <h4>经历 #{index + 1}</h4>
+                  <button
+                    className="remove-experience-button"
+                    onClick={() => removeExperience(index)}
+                    type="button"
+                  >
+                    删除
+                  </button>
+                </div>
+                
+                <div className="experience-form">
+                  <div className="form-group">
+                    <label className="form-label">年份</label>
+                    <input
+                      type="number"
+                      className="form-input"
+                      value={exp.year}
+                      onChange={(e) => handleExperienceChange(index, 'year', e.target.value)}
+                      placeholder="YYYY"
+                    />
+                  </div>
+                  
+                  <div className="form-group">
+                    <label className="form-label">标题</label>
+                    <input
+                      type="text"
+                      className="form-input"
+                      value={exp.title}
+                      onChange={(e) => handleExperienceChange(index, 'title', e.target.value)}
+                      placeholder="经历标题"
+                    />
+                  </div>
+                  
+                  <div className="form-group">
+                    <label className="form-label">描述</label>
+                    <textarea
+                      className="form-textarea"
+                      value={exp.description}
+                      onChange={(e) => handleExperienceChange(index, 'description', e.target.value)}
+                      placeholder="详细描述这一年发生的事情"
+                    />
+                  </div>
+                </div>
               </div>
             ))}
-            <button onClick={addExperience} className="add-experience-button">
-              添加经历
-            </button>
           </div>
         </div>
       ) : (
-        // 批量导入表单
-        <div className="batch-import-form">
+        <div className="batch-import-container">
           <div className="form-group">
-            <label className="form-label">批量数据 (JSON格式) *</label>
-            <textarea 
-              value={batchData} 
+            <label className="form-label">批量JSON数据</label>
+            <textarea
+              className="form-textarea batch-textarea"
+              value={batchData}
               onChange={handleBatchDataChange}
-              className="form-textarea"
-              placeholder="请输入符合格式的JSON数据"
+              placeholder="请粘贴符合格式的JSON数据"
             />
           </div>
-          
-          {batchData && (
-            <div className="json-preview">
-              <p>数据预览 (解析格式):</p>
-              <pre>
-                {(() => {
-                  try {
-                    return JSON.stringify(JSON.parse(batchData), null, 2);
-                  } catch (e) {
-                    return `无效的JSON: ${e.message}`;
-                  }
-                })()}
-              </pre>
-            </div>
-          )}
         </div>
       )}
       
-      {message && (
-        <div className={`${messageType}-message`}>
-          {message}
-        </div>
-      )}
-      
-      <button 
-        onClick={handleSubmit} 
-        className="import-button"
-        disabled={isSubmitting}
-      >
-        {isSubmitting ? '导入中...' : '导入数据'}
-      </button>
+      <div className="import-actions">
+        <button
+          className="template-button"
+          onClick={insertTemplate}
+          type="button"
+        >
+          插入模板
+        </button>
+        
+        <button
+          className="import-button"
+          onClick={handleSubmit}
+          disabled={isSubmitting}
+          type="button"
+        >
+          {isSubmitting ? '正在导入...' : '导入数据'}
+        </button>
+      </div>
     </div>
   );
 }
