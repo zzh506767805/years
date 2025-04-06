@@ -13,6 +13,13 @@ function AgeEventsPage() {
   const [loadedAge, setLoadedAge] = useState(null);
 
   const loadEvents = useCallback(async () => {
+    // 检查年龄参数是否有效
+    if (!age || isNaN(parseInt(age))) {
+      setError('无效的年龄参数');
+      setIsLoading(false);
+      return;
+    }
+
     // 如果已经加载了相同年龄的数据，不再重复请求
     if (dataLoaded && loadedAge === age) {
       return;
@@ -21,14 +28,21 @@ function AgeEventsPage() {
     try {
       setIsLoading(true);
       console.log(`加载 ${age} 岁事件...`);
-      const data = await fetchEventsByAge(age);
-      setEvents(data);
-      setError(null);
+      const response = await fetchEventsByAge(age);
+      
+      if (response && response.success) {
+        setEvents(response.events || []);
+        setError(null);
+      } else {
+        throw new Error(response?.message || '获取事件失败');
+      }
+      
       setDataLoaded(true);
       setLoadedAge(age);
     } catch (error) {
       console.error(`加载${age}岁事件失败:`, error);
       setError('无法加载事件数据，请稍后再试');
+      setEvents([]);
     } finally {
       setIsLoading(false);
     }
@@ -70,17 +84,18 @@ function AgeEventsPage() {
         <div className="no-events">这个年龄没有记录事件</div>
       ) : (
         <div className="events-list">
-          {events.map((person, personIndex) => (
-            <div key={personIndex} className="events-person-group">
-              <div className="events-person-name" onClick={() => handlePersonClick(person.personId)}>
-                {person.personName} ({parseInt(age) + person.birthYear}年)
+          {events.map((event) => (
+            <div key={event.eventId} className="events-person-group">
+              <div 
+                className="events-person-name" 
+                onClick={() => handlePersonClick(event.personId)}
+              >
+                {event.personName} ({event.year}年)
               </div>
-              {person.experiences.map((experience, expIndex) => (
-                <div key={expIndex} className="events-item">
-                  <h3>{experience.title}</h3>
-                  <p>{experience.description}</p>
-                </div>
-              ))}
+              <div className="events-item">
+                <h3>{event.title}</h3>
+                <p>{event.description}</p>
+              </div>
             </div>
           ))}
         </div>
