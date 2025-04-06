@@ -5,7 +5,12 @@ import axios from 'axios';
 const AuthContext = createContext();
 
 // API基础URL
-const API_URL = process.env.REACT_APP_API_URL || '';
+const BASE_URL = window.location.origin;
+const API_URL = process.env.NODE_ENV === 'production' 
+  ? `${BASE_URL}` 
+  : (process.env.REACT_APP_API_URL || 'http://localhost:5001');
+
+console.log('认证服务API URL:', API_URL);
 
 // 认证提供组件
 export const AuthProvider = ({ children }) => {
