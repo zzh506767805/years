@@ -1,130 +1,274 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
-import { useAuth } from '../components/AuthContext';
 import '../styles/HomePage.css';
+import { fetchAllPeople, searchPeople } from '../services/api';
+import { useAuth } from '../context/AuthContext';
 
-// API基础URL
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://years-web.vercel.app';
+function PeopleView({ people, onCardClick, isLoading }) {
+  if (isLoading) {
+    return <div className="loading">正在加载数据...</div>;
+  }
 
-const HomePage = () => {
+  if (!people || people.length === 0) {
+    return <div className="no-data">没有找到人物数据</div>;
+  }
+
+  return (
+    <div className="cards-grid">
+      {people.map((person) => (
+        <div 
+          key={person.id}
+          className="person-card"
+          onClick={() => onCardClick(person.id)}
+        >
+          <div className="card-content">
+            <h2>{person.name}</h2>
+            <h3>{person.title}</h3>
+            <p>{person.brief}</p>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function YearsView({ onYearClick, searchTerm }) {
+  const allYears = Array.from(new Set(Array.from({ length: 2024 - 1940 }, (_, i) => 1940 + i)));
+  
+  // 根据搜索词过滤年份
+  const filteredYears = searchTerm
+    ? allYears.filter(year => year.toString().includes(searchTerm))
+    : allYears;
+
+  if (filteredYears.length === 0) {
+    return <div className="no-data">没有找到符合 "{searchTerm}" 的年份</div>;
+  }
+
+  return (
+    <div className="years-grid">
+      {filteredYears.map((year) => (
+        <div 
+          key={year}
+          className="year-card"
+          onClick={() => onYearClick(year)}
+        >
+          <h2>{year}</h2>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function AgesView({ onAgeClick, searchTerm }) {
+  const allAges = Array.from({ length: 100 }, (_, i) => i);
+  
+  // 根据搜索词过滤年龄
+  const filteredAges = searchTerm
+    ? allAges.filter(age => age.toString().includes(searchTerm))
+    : allAges;
+
+  if (filteredAges.length === 0) {
+    return <div className="no-data">没有找到符合 "{searchTerm}" 的年龄</div>;
+  }
+
+  return (
+    <div className="ages-grid">
+      {filteredAges.map((age) => (
+        <div 
+          key={age}
+          className="age-card"
+          onClick={() => onAgeClick(age)}
+        >
+          <h2>{age}岁</h2>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function HomePage() {
   const navigate = useNavigate();
-  const { isAuthenticated } = useAuth();
-  
-  // 状态
+  const { isAuthenticated, logout } = useAuth();
+  const [viewMode, setViewMode] = useState('people'); // 'people', 'years', 'ages'
   const [people, setPeople] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  
-  // 加载人物数据
-  useEffect(() => {
-    const fetchPeople = async () => {
-      try {
-        setLoading(true);
-        const response = await axios.get(`${API_BASE_URL}/api/people`);
-        setPeople(response.data || []);
-        setError(null);
-      } catch (error) {
-        console.error('获取人物数据失败:', error);
-        setError('加载数据失败，请稍后重试');
-      } finally {
-        setLoading(false);
-      }
-    };
+  const [searchResults, setSearchResults] = useState([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [dataLoaded, setDataLoaded] = useState(false); // 新增标记，跟踪数据是否已加载
+
+  // 使用useCallback包装loadPeople函数，避免不必要的重新创建
+  const loadPeople = useCallback(async () => {
+    // 如果数据已加载，不再重复请求
+    if (dataLoaded) return;
     
-    fetchPeople();
-  }, []);
-  
-  // 处理搜索输入变化
-  const handleSearchChange = (e) => {
+    try {
+      setIsLoading(true);
+      console.log("加载人物数据...");
+      const data = await fetchAllPeople();
+      setPeople(data);
+      setSearchResults(data);
+      setDataLoaded(true);
+    } catch (error) {
+      console.error('加载人物数据失败:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [dataLoaded]);
+
+  // 加载所有人物数据
+  useEffect(() => {
+    loadPeople();
+  }, [loadPeople]);
+
+  // 防抖搜索
+  const debounceSearch = useCallback((value) => {
+    if (viewMode !== 'people') return;
+    
+    const timer = setTimeout(async () => {
+      if (value.trim() === '') {
+        setSearchResults(people);
+        setIsSearching(false);
+        return;
+      }
+      
+      setIsSearching(true);
+      try {
+        console.log("搜索中...", value);
+        const results = await searchPeople(value);
+        setSearchResults(results);
+      } catch (error) {
+        console.error('搜索失败:', error);
+      } finally {
+        setIsSearching(false);
+      }
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [people, viewMode]);
+
+  // 搜索输入变化时
+  useEffect(() => {
+    const cleanup = debounceSearch(searchTerm);
+    return cleanup;
+  }, [searchTerm, debounceSearch]);
+
+  const handleCardClick = (personId) => {
+    navigate(`/timeline/${personId}`);
+  };
+
+  const handleYearClick = (year) => {
+    navigate(`/year/${year}`);
+  };
+
+  const handleAgeClick = (age) => {
+    navigate(`/age/${age}`);
+  };
+
+  const handleSearch = (e) => {
     setSearchTerm(e.target.value);
   };
-  
-  // 过滤人物数据
-  const filteredPeople = people.filter(person => 
-    person.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (person.title && person.title.toLowerCase().includes(searchTerm.toLowerCase()))
-  );
-  
-  // 导航到时间线页面
-  const goToTimeline = (id) => {
-    navigate(`/timeline/${id}`);
+
+  const clearSearch = () => {
+    setSearchTerm('');
+    setSearchResults(people);
   };
-  
-  // 导航到导入页面
+
   const goToImport = () => {
     navigate('/import');
   };
-  
-  // 导航到年份页面
-  const goToYearPage = (year) => {
-    navigate(`/year/${year}`);
+
+  const goToLogin = () => {
+    navigate('/login');
   };
-  
-  // 渲染人物卡片
-  const renderPersonCard = (person) => (
-    <div 
-      key={person._id} 
-      className="person-card"
-      onClick={() => goToTimeline(person._id)}
-    >
-      <h3 className="person-name">{person.name}</h3>
-      <div className="person-birth">出生于 {person.birthYear} 年</div>
-      {person.title && <div className="person-title">{person.title}</div>}
-      {person.brief && <p className="person-brief">{person.brief}</p>}
-    </div>
-  );
-  
+
+  const goToRegister = () => {
+    navigate('/register');
+  };
+
+  const handleLogout = () => {
+    logout();
+    // 刷新当前页面或执行其他登出后的操作
+    window.location.reload();
+  };
+
   return (
     <div className="home-container">
       <div className="home-header">
         <div className="header-left">
-          <h1 className="site-title">Years</h1>
-          <p className="site-slogan">探索人物生命中的关键时刻</p>
+          <h1>Years</h1>
+          <div className="slogan">人生海海，波涛浮沉</div>
         </div>
         <div className="header-right">
-          {isAuthenticated && (
-            <button 
-              className="import-data-button"
-              onClick={goToImport}
-            >
-              导入数据
-            </button>
+          {isAuthenticated ? (
+            <>
+              <button onClick={goToImport} className="import-data-button">
+                导入数据
+              </button>
+              <button onClick={handleLogout} className="logout-button">
+                退出登录
+              </button>
+            </>
+          ) : (
+            <div className="auth-buttons">
+              <button onClick={goToLogin} className="login-button">
+                登录
+              </button>
+              <button onClick={goToRegister} className="register-button">
+                注册
+              </button>
+            </div>
           )}
         </div>
       </div>
       
-      <div className="search-section">
-        <div className="search-container">
-          <input 
-            type="text"
-            className="search-input"
-            placeholder="搜索人物名称或职业..."
-            value={searchTerm}
-            onChange={handleSearchChange}
-          />
-          <div className="search-icon">🔍</div>
-        </div>
-      </div>
-      
-      <div className="content-section">
-        {loading ? (
-          <div className="loading-message">加载中...</div>
-        ) : error ? (
-          <div className="error-message">{error}</div>
-        ) : filteredPeople.length === 0 ? (
-          <div className="no-results">
-            {searchTerm ? '未找到匹配的结果' : '暂无人物数据'}
-          </div>
-        ) : (
-          <div className="people-grid">
-            {filteredPeople.map(renderPersonCard)}
-          </div>
+      <div className="search-container">
+        <input
+          type="text"
+          placeholder="搜索..."
+          value={searchTerm}
+          onChange={handleSearch}
+          className="search-input"
+        />
+        {searchTerm && (
+          <button onClick={clearSearch} className="clear-search-btn">
+            ×
+          </button>
         )}
       </div>
+
+      <div className="view-switcher">
+        <button 
+          className={`switch-btn ${viewMode === 'people' ? 'active' : ''}`}
+          onClick={() => setViewMode('people')}
+        >
+          人物
+        </button>
+        <button 
+          className={`switch-btn ${viewMode === 'years' ? 'active' : ''}`}
+          onClick={() => setViewMode('years')}
+        >
+          年份
+        </button>
+        <button 
+          className={`switch-btn ${viewMode === 'ages' ? 'active' : ''}`}
+          onClick={() => setViewMode('ages')}
+        >
+          年龄
+        </button>
+      </div>
+
+      {viewMode === 'people' && 
+        <PeopleView 
+          people={searchResults} 
+          onCardClick={handleCardClick} 
+          isLoading={isLoading || isSearching} 
+        />
+      }
+      {viewMode === 'years' && <YearsView onYearClick={handleYearClick} searchTerm={searchTerm} />}
+      {viewMode === 'ages' && <AgesView onAgeClick={handleAgeClick} searchTerm={searchTerm} />}
     </div>
   );
-};
+}
 
-export default HomePage;
+export default HomePage; 

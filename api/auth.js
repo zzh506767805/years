@@ -1,75 +1,66 @@
-// 认证API处理函数 - 处理注册和登录请求
+// 专用API处理函数 - 用户认证（登录和注册）
 require('dotenv').config();
-const express = require('express');
 const mongoose = require('mongoose');
-const jwt = require('jsonwebtoken');
-const bcrypt = require('bcryptjs');
 const cors = require('cors');
+const express = require('express');
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
 
-// JWT密钥
-const JWT_SECRET = process.env.JWT_SECRET || 'years_web_secret_key';
-
-// 创建Express应用
-const app = express();
-
-// 中间件
-app.use(cors({
-  origin: '*',
-  methods: ['GET', 'POST', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-}));
-app.use(express.json());
-
-// 定义User模型
+// 导入或创建User模型
 let User;
 try {
   User = require('../server/models/User');
 } catch (error) {
-  console.log('导入User模型失败，创建临时模型');
-  
+  // 如果直接导入失败，尝试创建模型
   const userSchema = new mongoose.Schema({
     email: {
       type: String,
       required: true,
       unique: true,
       lowercase: true,
-      trim: true
+      trim: true,
     },
     password: {
       type: String,
-      required: true
+      required: true,
     },
     role: {
       type: String,
       enum: ['user', 'admin'],
-      default: 'user'
+      default: 'user',
     },
     createdAt: {
       type: Date,
-      default: Date.now
+      default: Date.now,
     }
   });
 
-  // 保存前对密码进行哈希处理
+  // 密码加密
   userSchema.pre('save', async function(next) {
     if (!this.isModified('password')) return next();
-    
-    try {
-      const salt = await bcrypt.genSalt(10);
-      this.password = await bcrypt.hash(this.password, salt);
-      next();
-    } catch (error) {
-      next(error);
-    }
+    this.password = await bcrypt.hash(this.password, 10);
+    next();
   });
 
-  // 比较密码
+  // 验证密码方法
   userSchema.methods.comparePassword = async function(candidatePassword) {
     return await bcrypt.compare(candidatePassword, this.password);
   };
 
+  // 避免模型重复注册错误
   User = mongoose.models.User || mongoose.model('User', userSchema);
 }
+
+// 创建Express实例
+const app = express();
+
+// 使用CORS和JSON解析中间件
+app.use(cors({
+  origin: '*',
+  methods: ['GET', 'POST', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+}));
+app.use(express.json());
 
 // 数据库连接
 let cachedDb = null;
@@ -84,32 +75,34 @@ async function connectToDatabase() {
       useUnifiedTopology: true
     });
     cachedDb = mongoose.connection;
-    console.log('MongoDB连接成功');
+    console.log('MongoDB连接成功 - 认证API');
   } catch (error) {
     console.error('MongoDB连接错误:', error);
     throw error;
   }
 }
 
-// 生成JWT
-const generateToken = (id) => {
-  return jwt.sign({ id }, JWT_SECRET, {
-    expiresIn: '30d' // 30天过期
-  });
+// 生成JWT令牌
+const generateToken = (user) => {
+  return jwt.sign(
+    { id: user._id, email: user.email, role: user.role },
+    process.env.JWT_SECRET || 'default_jwt_secret',
+    { expiresIn: '30d' }
+  );
 };
 
 // 注册处理函数
-const register = async (req, res) => {
+const registerHandler = async (req, res) => {
   try {
     await connectToDatabase();
     
     const { email, password } = req.body;
     
-    // 验证输入
+    // 基本输入验证
     if (!email || !password) {
       return res.status(400).json({
         success: false,
-        message: '请提供邮箱和密码'
+        message: '邮箱和密码是必填项'
       });
     }
     
@@ -122,22 +115,23 @@ const register = async (req, res) => {
       });
     }
     
-    // 获取用户总数来决定是否为第一个用户（管理员）
-    const userCount = await User.countDocuments();
-    const isFirstUser = userCount === 0;
+    // 特定邮箱设置为管理员
+    const isAdmin = email === process.env.ADMIN_EMAIL;
     
     // 创建用户
-    const user = await User.create({
+    const user = new User({
       email,
       password,
-      role: isFirstUser ? 'admin' : 'user' // 第一个用户作为管理员
+      role: isAdmin ? 'admin' : 'user'
     });
     
-    // 生成token
-    const token = generateToken(user._id);
+    await user.save();
     
-    // 返回用户信息（不含密码）
-    res.status(201).json({
+    // 生成令牌
+    const token = generateToken(user);
+    
+    // 返回成功响应
+    return res.status(201).json({
       success: true,
       token,
       user: {
@@ -148,26 +142,26 @@ const register = async (req, res) => {
     });
   } catch (error) {
     console.error('注册失败:', error);
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
-      message: '注册过程中发生错误',
+      message: '注册过程中出现错误',
       error: error.message
     });
   }
 };
 
 // 登录处理函数
-const login = async (req, res) => {
+const loginHandler = async (req, res) => {
   try {
     await connectToDatabase();
     
     const { email, password } = req.body;
     
-    // 验证输入
+    // 基本输入验证
     if (!email || !password) {
       return res.status(400).json({
         success: false,
-        message: '请提供邮箱和密码'
+        message: '邮箱和密码是必填项'
       });
     }
     
@@ -189,11 +183,11 @@ const login = async (req, res) => {
       });
     }
     
-    // 生成token
-    const token = generateToken(user._id);
+    // 生成令牌
+    const token = generateToken(user);
     
-    // 返回用户信息（不含密码）
-    res.status(200).json({
+    // 返回成功响应
+    return res.status(200).json({
       success: true,
       token,
       user: {
@@ -204,73 +198,65 @@ const login = async (req, res) => {
     });
   } catch (error) {
     console.error('登录失败:', error);
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
-      message: '登录过程中发生错误',
+      message: '登录过程中出现错误',
       error: error.message
     });
   }
 };
 
 // 获取当前用户信息
-const getCurrentUser = async (req, res) => {
+const getCurrentUserHandler = async (req, res) => {
   try {
     await connectToDatabase();
     
-    const token = req.headers.authorization?.split(' ')[1];
-    if (!token) {
+    // 从请求头获取令牌
+    const authorization = req.headers.authorization;
+    if (!authorization || !authorization.startsWith('Bearer ')) {
       return res.status(401).json({
         success: false,
-        message: '未授权，请登录'
+        message: '未授权，缺少有效令牌'
       });
     }
     
-    try {
-      // 验证token
-      const decoded = jwt.verify(token, JWT_SECRET);
-      
-      // 获取用户信息
-      const user = await User.findById(decoded.id).select('-password');
-      if (!user) {
-        return res.status(404).json({
-          success: false,
-          message: '用户不存在'
-        });
-      }
-      
-      res.status(200).json({
-        success: true,
-        user: {
-          id: user._id,
-          email: user.email,
-          role: user.role
-        }
-      });
-    } catch (error) {
-      return res.status(401).json({
+    const token = authorization.split(' ')[1];
+    
+    // 验证令牌
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'default_jwt_secret');
+    
+    // 查找用户（不返回密码）
+    const user = await User.findById(decoded.id).select('-password');
+    if (!user) {
+      return res.status(404).json({
         success: false,
-        message: '令牌无效，请重新登录'
+        message: '用户不存在'
       });
     }
+    
+    // 返回用户信息
+    return res.status(200).json({
+      success: true,
+      user: {
+        id: user._id,
+        email: user.email,
+        role: user.role
+      }
+    });
   } catch (error) {
     console.error('获取用户信息失败:', error);
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
-      message: '获取用户信息过程中发生错误',
+      message: '获取用户信息过程中出现错误',
       error: error.message
     });
   }
 };
 
-// 注册路由
-app.post('/api/auth/register', register);
-app.post('/api/auth/login', login);
-app.get('/api/auth/me', getCurrentUser);
+// 创建API路由
+app.post('/api/auth/register', registerHandler);
+app.post('/api/auth/login', loginHandler);
+app.get('/api/auth/me', getCurrentUserHandler);
 
-// 健康检查
-app.get('/health', (req, res) => {
-  res.status(200).json({ status: 'ok', serverTime: new Date().toISOString() });
-});
-
-// 导出处理函数
+// 导出app
 module.exports = app; 
