@@ -35,7 +35,8 @@
     "server": "node server/server.js",
     "dev": "concurrently \"npm run server\" \"npm run start\"",
     "seed": "node server/seed.js",
-    "vercel-build": "DISABLE_ESLINT_PLUGIN=true react-scripts build"
+    "vercel-build": "DISABLE_ESLINT_PLUGIN=true react-scripts build",
+    "test-api": "node server/test-api.js"
   },
   "eslintConfig": {
     "extends": [
