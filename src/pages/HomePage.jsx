@@ -88,7 +88,7 @@ function AgesView({ onAgeClick, searchTerm }) {
 
 function HomePage() {
   const navigate = useNavigate();
-  const { isAuthenticated, logout } = useAuth();
+  const { isAuthenticated, user, logout } = useAuth();
   const [viewMode, setViewMode] = useState('people'); // 'people', 'years', 'ages'
   const [people, setPeople] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -187,9 +187,13 @@ function HomePage() {
   };
 
   const handleLogout = () => {
+    console.log('HomePage中点击退出登录按钮');
     logout();
     // 不需要再次刷新页面，AuthContext.logout会处理
   };
+
+  // 调试用:显示当前认证状态
+  console.log('HomePage渲染, 认证状态:', isAuthenticated() ? '已登录' : '未登录', '用户:', user);
 
   return (
     <div className="home-container">
@@ -199,7 +203,7 @@ function HomePage() {
           <div className="slogan">人生海海，波涛浮沉</div>
         </div>
         <div className="header-right">
-          {isAuthenticated ? (
+          {isAuthenticated() ? (
             <>
               <button onClick={goToImport} className="import-data-button">
                 导入数据

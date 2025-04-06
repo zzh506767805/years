@@ -3,10 +3,10 @@ import axios from 'axios';
 // 生产环境下获取当前域名作为API基础URL
 const BASE_URL = window.location.origin;
 const API_URL = process.env.NODE_ENV === 'production' 
-  ? `${BASE_URL}` 
-  : (process.env.REACT_APP_API_URL || 'http://localhost:5001');
+  ? `${BASE_URL}/api` 
+  : (process.env.REACT_APP_API_URL || 'http://localhost:5001/api');
 
-console.log('API 服务 URL:', API_URL, '环境:', process.env.NODE_ENV);
+console.log('API URL:', API_URL, '环境:', process.env.NODE_ENV);
 
 const api = axios.create({
   baseURL: API_URL,
