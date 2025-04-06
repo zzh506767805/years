@@ -27,7 +27,9 @@ export const AuthProvider = ({ children }) => {
           
           if (response.data.success) {
             setUser(response.data.user);
+            console.log("用户信息加载成功:", response.data.user);
           } else {
+            console.log("用户信息加载失败:", response.data.message);
             // 如果响应不成功，清除令牌
             setUser(null);
             setToken(null);
@@ -41,12 +43,14 @@ export const AuthProvider = ({ children }) => {
           localStorage.removeItem('token');
           delete axios.defaults.headers.common['Authorization'];
         }
+      } else {
+        console.log("无token，未登录状态");
       }
       setLoading(false);
     };
 
     loadUser();
-  }, [token]);
+  }, [token, API_URL]);
 
   // 登录功能
   const login = async (email, password) => {
@@ -119,6 +123,9 @@ export const AuthProvider = ({ children }) => {
     
     // 清除请求头
     delete axios.defaults.headers.common['Authorization'];
+    
+    // 强制刷新页面，确保状态完全重置
+    window.location.href = '/';
   };
 
   // 检查用户是否具有特定角色

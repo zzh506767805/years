@@ -1,8 +1,9 @@
 import axios from 'axios';
 
-// 生产环境使用相对路径，避免跨域问题
+// 生产环境下获取当前域名作为API基础URL
+const BASE_URL = window.location.origin;
 const API_URL = process.env.NODE_ENV === 'production' 
-  ? '/api' 
+  ? `${BASE_URL}/api` 
   : (process.env.REACT_APP_API_URL || 'http://localhost:5001/api');
 
 console.log('API URL:', API_URL, '环境:', process.env.NODE_ENV);
@@ -59,10 +60,9 @@ api.interceptors.response.use(
       console.error('未授权:', error.config.url);
       // 清除本地存储的认证信息
       localStorage.removeItem('token');
-      localStorage.removeItem('user');
       
       // 可以在这里添加重定向到登录页面的逻辑
-      // window.location.href = '/login';
+      window.location.href = '/login';
     }
     
     // 其他错误处理

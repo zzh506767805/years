@@ -188,8 +188,7 @@ function HomePage() {
 
   const handleLogout = () => {
     logout();
-    // 刷新当前页面或执行其他登出后的操作
-    window.location.reload();
+    // 不需要再次刷新页面，AuthContext.logout会处理
   };
 
   return (
