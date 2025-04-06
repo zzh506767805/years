@@ -2,20 +2,18 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const mongoose = require('mongoose');
-const path = require('path');
 const apiRoutes = require('./routes/api');
 const authRoutes = require('./routes/authRoutes');
 
 const app = express();
-const PORT = process.env.PORT || 5001;
 
-// 调试日志中间件
+// 调试日志中间件 - 简化输出
 app.use((req, res, next) => {
-  console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
+  console.log(`${req.method} ${req.url}`);
   next();
 });
 
-// CORS中间件 - 允许所有域的请求（开发环境）
+// CORS中间件
 app.use(cors({
   origin: '*',
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
@@ -25,14 +23,6 @@ app.use(cors({
 
 // 解析JSON请求体
 app.use(express.json());
-
-// 验证请求中间件
-app.use((req, res, next) => {
-  console.log('请求头:', req.headers);
-  console.log('请求URL:', req.url);
-  console.log('请求方法:', req.method);
-  next();
-});
 
 // API路由
 app.use('/api', apiRoutes);
@@ -49,67 +39,71 @@ app.get('/health', (req, res) => {
   res.status(200).json({ status: 'ok', serverTime: new Date().toISOString() });
 });
 
-// 连接数据库
-let isConnected = false;
+// 使用轻量级的MongoClient连接策略
+let cachedDb = null;
+const MONGODB_URI = process.env.MONGODB_URI;
 
-const connectDB = async () => {
-  if (isConnected) {
-    console.log('已经连接到MongoDB');
-    return;
+async function connectToDatabase() {
+  if (cachedDb) {
+    return cachedDb;
   }
 
   try {
-    await mongoose.connect(process.env.MONGODB_URI, {
+    const client = await mongoose.connect(MONGODB_URI, {
       useNewUrlParser: true,
       useUnifiedTopology: true,
       serverSelectionTimeoutMS: 5000
     });
-    isConnected = true;
+    
+    cachedDb = client;
     console.log('MongoDB连接成功');
-  } catch (err) {
-    console.error('MongoDB连接失败:', err);
-    // 在Serverless环境下，返回错误信息而不是直接崩溃
-    if (process.env.NODE_ENV === 'production') {
-      console.error('尝试继续处理请求，但可能会导致数据库操作失败');
-    } else {
-      throw err;
-    }
+    return client;
+  } catch (error) {
+    console.error('MongoDB连接错误:', error);
+    throw error;
   }
-};
-
-// 在本地环境中启动服务器
-if (process.env.NODE_ENV !== 'production') {
-  connectDB().then(() => {
-    app.listen(PORT, () => {
-      console.log(`后端API服务器运行在端口 ${PORT}`);
-    });
-  });
-} else {
-  // 在Serverless环境中，每次请求都会连接数据库
-  app.use(async (req, res, next) => {
-    try {
-      await connectDB();
-      return next();
-    } catch (error) {
-      console.error('数据库连接失败，无法处理请求:', error);
-      return res.status(500).json({ 
-        success: false, 
-        message: '服务器内部错误：无法连接到数据库' 
-      });
-    }
-  });
 }
+
+// Serverless环境中的数据库连接中间件
+app.use(async (req, res, next) => {
+  try {
+    if (!MONGODB_URI) {
+      throw new Error('MONGODB_URI环境变量未设置');
+    }
+    
+    await connectToDatabase();
+    next();
+  } catch (error) {
+    console.error('数据库连接失败:', error);
+    return res.status(500).json({
+      success: false,
+      message: '服务器内部错误: 数据库连接失败'
+    });
+  }
+});
 
 // 错误处理中间件
 app.use((err, req, res, next) => {
   console.error('应用错误:', err);
-  res.status(500).json({ success: false, message: '服务器内部错误', error: err.message });
+  res.status(500).json({ 
+    success: false, 
+    message: '服务器内部错误', 
+    error: err.message 
+  });
 });
 
-// 处理404
-app.use((req, res) => {
-  res.status(404).json({ success: false, message: '请求的资源不存在' });
+// 捕获未处理的异步错误
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('未处理的Promise拒绝:', reason);
 });
+
+// 启动本地服务器（非Vercel环境）
+if (process.env.NODE_ENV !== 'production') {
+  const PORT = process.env.PORT || 5001;
+  app.listen(PORT, () => {
+    console.log(`后端API服务器运行在端口 ${PORT}`);
+  });
+}
 
 // 导出应用以支持Serverless部署
 module.exports = app; 
