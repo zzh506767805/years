@@ -5,7 +5,7 @@
       "src": "package.json",
       "use": "@vercel/static-build",
       "config": {
-        "distDir": "dist"
+        "distDir": "build"
       }
     },
     {
@@ -29,6 +29,22 @@
     {
       "src": "/api/people/(.*)",
       "dest": "/api/people.js"
+    },
+    {
+      "src": "/api/auth/(.*)",
+      "dest": "/api/auth.js"
+    },
+    {
+      "src": "/api/events/age/(.*)",
+      "dest": "/api/eventsByAge.js"
+    },
+    {
+      "src": "/api/events/year/(.*)",
+      "dest": "/api/eventsByYear.js"
+    },
+    {
+      "src": "/api/person/(.*)",
+      "dest": "/api/person.js"
     },
     {
       "src": "/(.*)",
