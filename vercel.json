@@ -23,6 +23,10 @@
       "dest": "/api/debug.js"
     },
     {
+      "src": "/api/search",
+      "dest": "/api/search.js"
+    },
+    {
       "src": "/api/people/search",
       "dest": "/api/search.js"
     },
